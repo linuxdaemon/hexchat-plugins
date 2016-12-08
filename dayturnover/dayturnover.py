@@ -15,13 +15,14 @@ day_format = "%d %b %Y"
 
 def on_data(word, word_eol, userdata, attributes):
     global old_day
-    day = time.localtime(attributes.time or time.time())[:3]
+    time = time.localtime(attributes.time or time.time())
+    day = time[:3]
     if old_day and old_day == day:
         return hexchat.EAT_NONE
     
     old_day = day
     for chan in hexchat.get_list("channels"):
-        chan.context.prnt("Day changed to {}".format(time.strftime(day_format, day)))
+        chan.context.prnt("Day changed to {}".format(time.strftime(day_format, time)))
     return hexchat.EAT_NONE
 
 
