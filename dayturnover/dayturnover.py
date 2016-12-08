@@ -15,7 +15,8 @@ day_format = "%d %b %Y"
 
 def on_data(word, word_eol, userdata, attributes):
     global old_day
-    t = time.localtime(attributes.time or time.time())
+    #t = time.localtime(attributes.time or time.time())
+    t = time.localtime()
     day = t[:3]
     if old_day and old_day == day:
         return hexchat.EAT_NONE
