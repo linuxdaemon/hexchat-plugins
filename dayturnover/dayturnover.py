@@ -1,8 +1,5 @@
 import hexchat
-import time
 import datetime
-
-from threading import Thread
 
 __module_name__ = "DayTurnover"
 __module_version__ = "0.1"
@@ -27,7 +24,8 @@ def timer_cb(userdata):
     now = datetime.datetime.now()
     if now.hour == 0 and now.min == 0:
         for chan in hexchat.get_list("channels"):
-            chan.context.prnt(now.strftime(getpref("format", DEFAULT_FORMAT)))
+            chan.context.prnt(now.strftime(getpref("format", DEFAULT_FMT)))
+
     return True
 
 
@@ -55,6 +53,7 @@ def fmt(word, word_eol):
         if not setpref("format", word_eol[0]):
             print("Failed to set format")
             return
+    
     print(__module_name__, "format:", getpref("format", DEFAULT_FMT))
 
 
@@ -64,6 +63,7 @@ def interval(word, word_eol):
         if not setpref("interval", intv):
             print("Failed to set interval")
             return
+
     print(__module_name__, "interval:", getpref("interval", DEFAULT_INTERVAL))
 
 
@@ -84,6 +84,7 @@ def cmd_cb(word, word_eol, userdata):
             commands[subcmd](word[2:], word_eol[2:])
         else:
             hexchat.command("HELP {}".format(word[0]))
+    
     return hexchat.EAT_ALL
 
 
