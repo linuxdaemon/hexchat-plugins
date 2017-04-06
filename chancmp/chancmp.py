@@ -19,6 +19,7 @@ def get_window(name):
     if not c:
         hexchat.command("query -nofocus {}".format(wname))
         c = hexchat.find_context(channel=wname)
+
     return c
 
 
@@ -36,9 +37,12 @@ def cmp_cb(word, wordeol, userdata):
                 match_nicks.append(user.nick)
             else:
                 found_nicks.append(user.nick)
+
         if runs != 0:
             match_nicks = set(found_nicks) & set(match_nicks)
+
         runs += 1
+
     wprint(w, "{}".format(match_nicks))
     return hexchat.EAT_ALL
 
@@ -52,8 +56,10 @@ def find_cb(word, word_eol, userdata):
             for user in chan.context.get_list("users"):
                 if nick == user.nick:
                     data.setdefault(chan.network, []).append(chan.channel)
+
         for net in data:
             wprint(w, "{}: {}".format(net, ", ".join(data[net])))
+
     return hexchat.EAT_ALL
 
 
@@ -78,19 +84,19 @@ def find1_cb(word, word_eol, userdata):
         for ctx in hexchat.get_list("channels"):
             if ctx.type == 1:
                 wi_watch[nick]["networks"].append(ctx.network)
-                ctx.context.command("whois {nick}".format(nick=nick))
+                ctx.context.command("WHOIS {}".format(nick))
 
     return hexchat.EAT_ALL
 
 
+@hexchat.hook_unload
 def unload_cb(userdata):
     print(__module_name__, "plugin unloaded")
 
 
-hexchat.hook_unload(unload_cb)
-hexchat.hook_command("CHANCMP", cmp_cb, "Compare the user lists of provided channels")
-hexchat.hook_command("NICKFIND", find_cb, "Find which contexts a user is visible in")
-hexchat.hook_command("SRVFIND", find1_cb, "find which servers/networks a user is visible on")
+hexchat.hook_command("CHANCMP", cmp_cb, help="Compare the user lists of provided channels")
+hexchat.hook_command("NICKFIND", find_cb, help="Find which contexts a user is visible in")
+hexchat.hook_command("SRVFIND", find1_cb, help="find which servers/networks a user is visible on")
 hexchat.hook_server("311", whois_cb)
 hexchat.hook_server("318", endwhois_cb)
 
