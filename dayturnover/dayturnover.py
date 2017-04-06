@@ -1,5 +1,12 @@
-import hexchat
 import datetime
+import os
+import sys
+
+import hexchat
+
+sys.path = [os.path.join(hexchat.get_info("configdir"), "addons")] + sys.path
+
+from libhex import hook
 
 __module_name__ = "DayTurnover"
 __module_version__ = "0.1"
@@ -53,7 +60,7 @@ def fmt(word, word_eol):
         if not setpref("format", word_eol[0]):
             print("Failed to set format")
             return
-    
+
     print(__module_name__, "format:", getpref("format", DEFAULT_FMT))
 
 
@@ -68,13 +75,14 @@ def interval(word, word_eol):
 
 
 commands = {
-        "enable": enable,
-        "disable": disable,
-        "format": fmt,
-        "interval": interval,
-        }
+    "enable": enable,
+    "disable": disable,
+    "format": fmt,
+    "interval": interval,
+}
 
 
+@hook.command("DAYCHANGE", help="DAYCHANGE [ON|OFF|FORMAT <format string>|INTERVAL <seconds>]")
 def cmd_cb(word, word_eol, userdata):
     if len(word) < 2:
         hexchat.command("HELP {}".format(word[0]))
@@ -84,10 +92,11 @@ def cmd_cb(word, word_eol, userdata):
             commands[subcmd](word[2:], word_eol[2:])
         else:
             hexchat.command("HELP {}".format(word[0]))
-    
+
     return hexchat.EAT_ALL
 
 
+@hook.unload
 def unload(userdata):
     print(__module_name__, "plugin unloaded")
 
@@ -95,8 +104,4 @@ def unload(userdata):
 if getpref("enabled", True):
     timer_hook = hexchat.hook_timer(getpref("interval", DEFAULT_INTERVAL), timer_cb)
 
-hexchat.hook_command("DAYCHANGE", cmd_cb, help="DAYCHANGE [ON|OFF|FORMAT <format string>|INTERVAL <seconds>]")
-hexchat.hook_unload(unload)
-
 print(__module_name__, "plugin loaded")
-
