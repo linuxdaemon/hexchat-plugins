@@ -13,7 +13,7 @@ __module_version__ = "0.1"
 __module_description__ = "Adds a 'Day changed' message to buffers on day turnovers"
 
 DEFAULT_FMT = "Day changed to %d %b %Y"
-DEFAULT_INTERVAL = 15000
+DEFAULT_INTERVAL = 15
 
 timer_hook = None
 
@@ -29,7 +29,7 @@ def setpref(name, value):
 
 def timer_cb(userdata):
     now = datetime.datetime.now()
-    if now.hour == 0 and now.min == 0:
+    if now.hour == 0 and now.minute == 0:
         for chan in hexchat.get_list("channels"):
             chan.context.prnt(now.strftime(getpref("format", DEFAULT_FMT)))
 
@@ -40,7 +40,8 @@ def enable(word, word_eol):
     setpref("enabled", True)
     global timer_hook
     if timer_hook is None:
-        timer_hook = hexchat.hook_timer(getpref("interval", DEFAULT_INTERVAL), timer_cb)
+        timer_hook = hexchat.hook_timer(getpref("interval", DEFAULT_INTERVAL) * 1000, timer_cb)
+        print(__module_name__, "enabled")
     else:
         print(__module_name__, "already enabled")
 
@@ -51,6 +52,7 @@ def disable(word, word_eol):
     if timer_hook is not None:
         hexchat.unhook(timer_hook)
         timer_hook = None
+        print(__module_name__, "disabled")
     else:
         print(__module_name__, "not enabled")
 
@@ -71,12 +73,12 @@ def interval(word, word_eol):
             print("Failed to set interval")
             return
 
-    print(__module_name__, "interval:", getpref("interval", DEFAULT_INTERVAL))
+    print(__module_name__, "interval:", getpref("interval", DEFAULT_INTERVAL), "seconds")
 
 
 commands = {
-    "enable": enable,
-    "disable": disable,
+    "on": enable,
+    "off": disable,
     "format": fmt,
     "interval": interval,
 }
@@ -102,6 +104,6 @@ def unload(userdata):
 
 
 if getpref("enabled", True):
-    timer_hook = hexchat.hook_timer(getpref("interval", DEFAULT_INTERVAL), timer_cb)
+    timer_hook = hexchat.hook_timer(getpref("interval", DEFAULT_INTERVAL) * 1000, timer_cb)
 
 print(__module_name__, "plugin loaded")
