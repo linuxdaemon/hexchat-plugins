@@ -13,9 +13,10 @@ __module_version__ = "0.1"
 __module_description__ = "Adds a 'Day changed' message to buffers on day turnovers"
 
 DEFAULT_FMT = "Day changed to %d %b %Y"
-DEFAULT_INTERVAL = 15
+DEFAULT_INTERVAL = 30
 
 timer_hook = None
+state = 0
 
 
 def getpref(name, default):
@@ -28,8 +29,12 @@ def setpref(name, value):
 
 
 def timer_cb(userdata):
+    global state
     now = datetime.datetime.now()
-    if now.hour == 0 and now.minute == 0:
+    if now.hour == 23 and now.minute == 59:
+        state = 1
+    elif now.hour == 0 and now.minute == 0 and state == 1:
+        state = 2
         for chan in hexchat.get_list("channels"):
             chan.context.prnt(now.strftime(getpref("format", DEFAULT_FMT)))
 
