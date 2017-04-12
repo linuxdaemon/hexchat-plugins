@@ -9,7 +9,7 @@ sys.path = [os.path.join(hexchat.get_info("configdir"), "addons")] + sys.path
 from libhex import hook
 
 __module_name__ = "DayTurnover"
-__module_version__ = "0.1"
+__module_version__ = "0.0.2"
 __module_description__ = "Adds a 'Day changed' message to buffers on day turnovers"
 
 DEFAULT_FMT = "Day changed to %d %b %Y"
