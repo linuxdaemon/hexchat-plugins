@@ -15,7 +15,7 @@ def get_net_name():
 def handle(word, word_eol, event):
     if not fnmatch(word[0], "*!snofilter@znc.in"):
         return hexchat.EAT_NONE
-    window = word[0].split('!', 1)[0][1:].lower()
+    window = word[0].split('!', 1)[0][2:].lower()
     net = "{}-snotices".format(get_net_name())
     serv = hexchat.find_context(net)
     if not serv:
