@@ -32,7 +32,7 @@ def on_notice(word, word_eol, userdata):
 
 
 def on_privmsg(word, word_eol, userdata):
-    return Handle(word, word_eol, "Private Message to Dialog")
+    return handle(word, word_eol, "Private Message to Dialog")
 
 def unload(userdata):
     print(__module_name__, "plugin unloaded.")
