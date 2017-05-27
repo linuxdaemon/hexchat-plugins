@@ -1,19 +1,20 @@
+# coding=utf-8
+import re
 import threading
 from collections import namedtuple
+from typing import Tuple, Generator
 
 import dns.resolver
-import ipwhois
-import re
-
 import hexchat
+import ipwhois
 
 __module_name__ = "WHOISLookup"
 __module_description__ = "Provides commands to look up an IP address in whois and check it against DNSBLs"
-__module_version__ = "0.1.0"
+__module_version__ = "0.2.0"
 
 IP_RE = re.compile(r"^[0-9]{1,3}(?:\.[0-9]{1,3}){3}$")
-THREADS = []
-DNSBLS = [
+THREADS = list()
+DNSBLS = {
     "dnsbl.sorbs.net",
     "spam.dnsbl.sorbs.net",
     "tor.dnsbl.sectoor.de",
@@ -23,7 +24,9 @@ DNSBLS = [
     "dnsbl.dronebl.org",
     "torexit.dan.me.uk",
     "dnsbl.tornevall.org",
-]
+}
+CHANS = {"#staff", "##sysop", "##sherlock", "##ldtest"}
+RESOLVER = dns.resolver.Resolver()
 
 
 class Thread(threading.Thread):
@@ -32,112 +35,126 @@ class Thread(threading.Thread):
         self.start()
 
 
-def get_query(name, server=None):
-    query = hexchat.find_context(server=server, channel=name)
-    if not query:
-        hexchat.command("query -nofocus {}".format(name))
-        query = hexchat.find_context(server=server, channel=name)
-
-    return query
+def pluralize(count: int, unit: str):
+    if count == 1:
+        return "{} {}".format(count, unit)
+    return "{} {}s".format(count, unit)
 
 
-def do_whois(ip, ctx, nick=None):
-    serv = ctx.get_info("network")
-    query = get_query(">>whois-lookup<<", serv)
+def get_query(name: str, server: str = None) -> 'hexchat.Context':
+    hexchat.command("query -nofocus {}".format(name))
+    return hexchat.find_context(server=server, channel=name)
+
+
+def do_whois(ip: str, ctx: 'hexchat.Context', nick: str = None) -> None:
+    server = ctx.get_info("network")
+    query = get_query(">>whois-lookup<<", server)
     try:
-        wi = ipwhois.IPWhois(ip)
-        data = wi.lookup_rdap()
-        net = data.get("network", {})
+        whois = ipwhois.IPWhois(ip)
+        result = whois.lookup_rdap()
+        net = result.get("network", {})
         netname = net.get("name")
         cidr = net.get("cidr")
-        names = [obj["contact"]["name"] for obj in data.get("objects", []).values()
-                 if "contact" in obj and "name" in obj["contact"]]
+        names = []
+        objects = result.get("objects", {})
+        for obj in objects.values():
+            name = obj.get("contact", {}).get("name")
+            if name:
+                names.append(name)
 
         name = "UNKNOWN"
-        if len(names) > 0:
+        if names:
             name = names[0]
 
-        pfx = ""
-        if nick:
-            pfx = "{nick} is logged in from ".format(nick=nick)
+        prefix = "{nick} is logged in from".format(nick=nick) if nick else ""
+        data = {
+            "prefix": prefix,
+            "ip": ip,
+            "contact": name,
+            "netname": netname,
+            "cidr": cidr,
+        }
+        log_msg = "{prefix}IP '{ip}', owned by {contact} ({netname} {cidr})"
+        chan_msg = "[WHOIS] {prefix}IP '{ip}' ({netname} {cidr})"
+        query.prnt(log_msg.format_map(data))
+        ctx.command("say {}".format(chan_msg).format_map(data))
 
-        data = {"pfx": pfx, "ip": ip, "contact": name, "netname": netname, "cidr": cidr}
-        msg = "{pfx}IP '{ip}', owned by {contact} ({netname} {cidr})".format(**data)
-        fmsg = "{pfx}IP '{ip}' ({netname} {cidr})".format(**data)
-        query.prnt(msg)
-        ctx.command("say WHOIS DATA: {}".format(fmsg))
-
-    except ipwhois.exceptions.IPDefinedError as e:
+    except ipwhois.IPDefinedError:
         query.prnt("{} is reserved".format(ip))
 
 
 DNSResp = namedtuple('DNSResp', 'blacklist record text')
 
 
-def check_dnsbl(ip):
+def check_dnsbl(ip: str) -> Generator[DNSResp, None, None]:
     for bl in DNSBLS:
-        resolv = dns.resolver.Resolver()
-        query = "{}.{}".format(".".join(reversed(ip.split("."))), bl)  # d.c.b.a.blacklist
+        # d.c.b.a.blacklist
+        query = "{}.{}".format('.'.join(reversed(ip.split('.'))), bl)
         try:
-            ans = resolv.query(query, "A")
-            txt = resolv.query(query, "TXT")
+            ans = RESOLVER.query(query, "A")
+            txt = RESOLVER.query(query, "TXT")
             yield DNSResp(bl, ans[0], txt[0])
 
         except dns.resolver.NXDOMAIN:
             pass
 
 
-def do_dnsbl(ip, ctx, nick=None):
+def do_dnsbl(ip: str, ctx: 'hexchat.Context', nick: str = None) -> None:
     if not IP_RE.match(ip):
         return
 
     matches = list(check_dnsbl(ip))
+    if not matches:
+        return
 
     if nick:
         ip = "{} ({})".format(ip, nick)
 
     query = get_query(">>dnsbl-lookup<<", ctx.get_info("network"))
+    log_msg = "IP: {ip} is listed in {match.blacklist} " \
+              "({match.record}: {match.text})"
+    suffix = ""
+    if len(matches) > 2:
+        suffix = " and {}".format(pluralize(len(matches) - 1, "count"))
+    ctx.command(
+        "say [DNSBL] " + log_msg.format(ip=ip, match=matches[0]) + suffix
+    )
 
-    msg = "[DNSBL] IP: {ip} is listed in {bl} ({rec}: {txt})"
-    msg1 = msg + " and {num} other{plural}"
-
-    for i in range(len(matches)):
-        match = matches[i]
-        data = {"ip": ip, "bl": match.blacklist, "rec": match.record, "txt": match.text, "num": len(matches) - 1,
-                "plural": "s" if len(matches) > 2 else ""}
-
-        if i == 0:
-            ctx.command("say " + (msg1 if len(matches) > 1 else msg).format(**data))
-
-        query.prnt(msg.format(**data))
+    for match in matches:
+        query.prnt(log_msg.format(ip=ip, match=match))
 
 
-def lookup(args):
-    global THREADS
+LOOKUPS = (
+    ("WHOIS", do_whois),
+    ("DNSBL", do_dnsbl),
+)
+
+
+def run_lookup(ip: str, ctx: 'hexchat.Context'):
+    for name, func in LOOKUPS:
+        Thread(func, ip, ctx, name="{}-{}".format(name, ip))
+
+
+def lookup(args: Tuple[str]):
     chan = hexchat.get_info("channel")
-    net = hexchat.get_info("network")
-    if not args or chan.lower() not in ["#staff", "##sysop", "##sherlock", "##ldtest"]:
+    if chan.lower() not in CHANS:
         return
 
+    net = hexchat.get_info("network")
     ctx = hexchat.find_context(net, chan)
-
     for ip in args:
-        THREADS.append(Thread(do_whois, ip, ctx, name="WHOIS-{}".format(ip)))
-        THREADS.append(Thread(do_dnsbl, ip, ctx, name="DNSBL-{}".format(ip)))
+        run_lookup(ip, ctx)
 
 
-def cull_threads(userdata):
-    i = 0
-    while i < len(THREADS):
-        if not THREADS[i].is_alive():
-            del THREADS[i]
-        else:
-            i += 1
+def cull_threads(userdata) -> bool:
+    for thread in reversed(THREADS):
+        if not thread.is_alive():
+            THREADS.remove(thread)
 
     return True
 
 
-commands = {"$lookup": lookup}
+COMMANDS = {"$lookup": lookup}
 
 
 def cmd_cb(word, word_eol, userdata):
@@ -146,16 +163,19 @@ def cmd_cb(word, word_eol, userdata):
         text = text[1:]
 
     args = text.split()
-    if not args:
-        return hexchat.EAT_NONE
-
-    cmd = args.pop(0)
-    if cmd.lower() not in commands:
-        return hexchat.EAT_NONE
-
-    commands[cmd.lower()](args)
-
+    if args:
+        cmd, *args = args
+        if cmd.lower() in COMMANDS:
+            COMMANDS[cmd.lower()](args)
     return hexchat.EAT_NONE
+
+
+def lookup_cmd(word, word_eol, userdata):
+    if len(word) == 1:
+        hexchat.command("HELP {}".format(word[0]))
+    else:
+        lookup(word[1:])
+    return hexchat.EAT_ALL
 
 
 @hexchat.hook_unload
@@ -163,6 +183,8 @@ def unload_cb(userdata):
     print(__module_name__, "plugin unloaded")
 
 
+hexchat.hook_command("LOOKUP", lookup_cmd,
+                     help="LOOKUP <IP address>{, <IP address>}")
 hexchat.hook_print("Channel Message", cmd_cb)
 hexchat.hook_print("Your Message", cmd_cb)
 hexchat.hook_timer(300000, cull_threads)
