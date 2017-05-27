@@ -127,6 +127,7 @@ UserList = List[UserListItem]
 
 Lists = Union[DCCList, ChannelList, IgnoreList, NotifyList, UserList]
 
+
 # End of generated code
 
 

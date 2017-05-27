@@ -1,3 +1,4 @@
+# coding=utf-8
 from fnmatch import fnmatch
 
 import hexchat
@@ -5,6 +6,7 @@ import hexchat
 __module_name__ = "ZNC-snofilter"
 __module_version__ = "0.0.1"
 __module_description__ = "Companion script to my snofilter module for ZNC, moves all notices from the module in to query windows"
+
 
 def get_net_name():
     for ctx in hexchat.get_list('channels'):
@@ -33,6 +35,7 @@ def on_notice(word, word_eol, userdata):
 
 def on_privmsg(word, word_eol, userdata):
     return handle(word, word_eol, "Private Message to Dialog")
+
 
 hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 

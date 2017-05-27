@@ -97,5 +97,6 @@ def generate():
     lines.append('')
     print('\n'.join(lines))
 
+
 if __name__ == "__main__":
     generate()
