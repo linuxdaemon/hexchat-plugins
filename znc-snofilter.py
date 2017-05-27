@@ -34,11 +34,8 @@ def on_notice(word, word_eol, userdata):
 def on_privmsg(word, word_eol, userdata):
     return handle(word, word_eol, "Private Message to Dialog")
 
-def unload(userdata):
-    print(__module_name__, "plugin unloaded.")
+hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 
-hexchat.hook_unload(unload)
 hexchat.hook_server("NOTICE", on_notice)
 hexchat.hook_server("PRIVMSG", on_privmsg)
 print(__module_name__, "plugin loaded.")
-

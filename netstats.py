@@ -106,10 +106,7 @@ def stats_cmd(word, word_eol, userdata):
     return hexchat.EAT_ALL
 
 
-@hexchat.hook_unload
-def unload(userdata):
-    print(__module_name__, "plugin unloaded")
-
+hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 
 hexchat.hook_command(
     "NETSTATS", stats_cmd, help="NETSTATS [-o], returns statistics for the "

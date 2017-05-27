@@ -178,13 +178,11 @@ def lookup_cmd(word, word_eol, userdata):
     return hexchat.EAT_ALL
 
 
-@hexchat.hook_unload
-def unload_cb(userdata):
-    print(__module_name__, "plugin unloaded")
+hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 
-
-hexchat.hook_command("LOOKUP", lookup_cmd,
-                     help="LOOKUP <IP address>{, <IP address>}")
+hexchat.hook_command(
+    "LOOKUP", lookup_cmd, help="LOOKUP <IP address>{, <IP address>}"
+)
 hexchat.hook_print("Channel Message", cmd_cb)
 hexchat.hook_print("Your Message", cmd_cb)
 hexchat.hook_timer(300000, cull_threads)
