@@ -85,6 +85,7 @@ def stat_handler(stat: StatHandler):
 def on_stats_end(word, word_eol, userdata):
     for hook in HOOKS.values():
         hexchat.unhook(hook)
+    HOOKS.clear()
 
 
 def stats_cmd(word, word_eol, userdata):
