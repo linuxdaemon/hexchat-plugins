@@ -41,4 +41,4 @@ hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 
 hexchat.hook_server("NOTICE", on_notice)
 hexchat.hook_server("PRIVMSG", on_privmsg)
-print(__module_name__, "plugin loaded.")
+print(__module_name__, "plugin loaded")
