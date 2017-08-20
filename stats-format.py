@@ -6,15 +6,20 @@ from collections import namedtuple
 import hexchat
 
 __module_name__ = "StatsFormat"
-__module_version__ = "0.0.1"
+__module_author__ = "linuxdaemon"
+__module_version__ = "0.1.0"
 __module_description__ = "Formats the output from /stats for g/z/e/k/q-lines for InspIRCd"
 
 NETWORKS = {
     "snoonet",
-    "snoodev"
+    "snoodev",
 }
 
-LINE_FMT = "{name}: {mask} set at {set_time} by {source} \2duration\2: {duration} \2reason\2: {reason}"
+STATS_END = '219'
+
+LINE_FMT = "\2{name}\2: {mask} \2set at\2: {set_time} \2by\2: {source} " \
+           "\2duration\2: {duration} \2expires\2: {expires} " \
+           "\2reason\2: {reason}"
 
 TIME_MULTIPLIERS = (
     ('y', 365 * 24 * 60 * 60),
@@ -28,15 +33,17 @@ TIME_MULTIPLIERS = (
 StatHandler = namedtuple('StatHandler', 'name numeric char')
 
 STATS = (
-    StatHandler('CBAN', '210', 'C'),
-    StatHandler('E:Line', '223', 'e'),
-    StatHandler('G:Line', '223', 'g'),
-    StatHandler('SHUN', '223', 'H'),
-    StatHandler('K:Line', '216', 'k'),
-    StatHandler('Q:Line', '217', 'q'),
-    StatHandler('R:Line', '223', 'R'),
-    StatHandler('SVSHOLD', '210', 'S'),
-    StatHandler('Z:Line', '223', 'Z'),
+    StatHandler(name='A:Line', numeric='210', char='a'),
+    StatHandler(name='CBAN', numeric='210', char='C'),
+    StatHandler(name='E:Line', numeric='223', char='e'),
+    StatHandler(name='G:Line', numeric='223', char='g'),
+    StatHandler(name='GA:Line', numeric='210', char='A'),
+    StatHandler(name='SHUN', numeric='223', char='H'),
+    StatHandler(name='K:Line', numeric='216', char='k'),
+    StatHandler(name='Q:Line', numeric='217', char='q'),
+    StatHandler(name='R:Line', numeric='223', char='R'),
+    StatHandler(name='SVSHOLD', numeric='210', char='S'),
+    StatHandler(name='Z:Line', numeric='223', char='Z'),
 )
 
 HOOKS = dict()
@@ -48,13 +55,13 @@ def get_net_ctx():
             return ctx
 
 
-def time_format(seconds: int) -> str:
+def time_format(seconds: int, perm: str) -> str:
     ts = ""
     for char, divisor in TIME_MULTIPLIERS:
         value, seconds = divmod(seconds, divisor)
         if value:
             ts += "{}{}".format(value, char)
-    return ts or "permanent"
+    return ts or perm
 
 
 def stat_handler(stat: StatHandler):
@@ -68,15 +75,22 @@ def stat_handler(stat: StatHandler):
         displayable, set_time, duration, source, reason = line.split(None, 4)
         set_time = int(set_time)
         duration = int(duration)
+        expires_at = (set_time + duration) if duration else 0
+        expires_in = int(expires_at - time.time())
+        if expires_in < 0:
+            expires_in = 0
         if reason[0] == ':':
             reason = reason[1:]
-        get_net_ctx().context.prnt(
-            LINE_FMT.format(
-                name=stat.name, mask=displayable,
-                set_time=time.ctime(set_time), source=source,
-                duration=time_format(duration), reason=reason
-            )
-        )
+        data = {
+            'name': stat.name,
+            'mask': displayable,
+            'set_time': time.ctime(set_time),
+            'source': source,
+            'duration': time_format(duration, 'permanent'),
+            'expires': time_format(expires_in, 'never'),
+            'reason': reason,
+        }
+        get_net_ctx().context.prnt(LINE_FMT.format_map(data))
         return hexchat.EAT_HEXCHAT
 
     return _handle
@@ -89,17 +103,19 @@ def on_stats_end(word, word_eol, userdata):
 
 
 def stats_cmd(word, word_eol, userdata):
-    if get_net_ctx().channel.lower() == 'snoonet':
+    if get_net_ctx().channel.lower() in NETWORKS:
         char = word[1]
-        for stat in STATS:
-            if stat.char == char:
-                HOOKS[stat.char] = hexchat.hook_server(
-                    stat.numeric, stat_handler(stat)
-                )
+        HOOKS.update({
+            stat.char: hexchat.hook_server(
+                stat.numeric, stat_handler(stat)
+            )
+            for stat in STATS if stat.char == char
+        })
+        HOOKS[STATS_END] = hexchat.hook_server(STATS_END, on_stats_end)
 
 
 hexchat.hook_unload(lambda userdata: print(__module_name__, "plugin unloaded"))
 
 hexchat.hook_command('STATS', stats_cmd)
-hexchat.hook_server('219', on_stats_end)
+
 print(__module_name__, "plugin loaded")
