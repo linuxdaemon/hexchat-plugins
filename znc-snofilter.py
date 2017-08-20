@@ -4,6 +4,7 @@ from fnmatch import fnmatch
 import hexchat
 
 __module_name__ = "ZNC-snofilter"
+__module_author__ = "linuxdaemon"
 __module_version__ = "0.0.1"
 __module_description__ = "Companion script to my snofilter module for ZNC, moves all notices from the module in to query windows"
 

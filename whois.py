@@ -9,8 +9,9 @@ import hexchat
 import ipwhois
 
 __module_name__ = "WHOISLookup"
-__module_description__ = "Provides commands to look up an IP address in whois and check it against DNSBLs"
+__module_author__ = "linuxdaemon"
 __module_version__ = "0.2.0"
+__module_description__ = "Provides commands to look up an IP address in whois and check it against DNSBLs"
 
 IP_RE = re.compile(r"^[0-9]{1,3}(?:\.[0-9]{1,3}){3}$")
 THREADS = list()

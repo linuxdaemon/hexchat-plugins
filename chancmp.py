@@ -2,8 +2,9 @@
 import hexchat
 
 __module_name__ = "Chan Compare"
-__module_description__ = "Compares User Lists Between Channels"
+__module_author__ = "linuxdaemon"
 __module_version__ = "0.1.0"
+__module_description__ = "Compares User Lists Between Channels"
 
 DIALOG_FMT = ">>{name}<<"  # produces '>>test<<' as a query dialog
 wi_watch = {}
@@ -11,12 +12,8 @@ wi_watch = {}
 
 def get_query(name, server=None):
     name = DIALOG_FMT.format(name=name)
-    query = hexchat.find_context(server=server, channel=name)
-    if not query:
-        hexchat.command("query -nofocus {}".format(name))
-        query = hexchat.find_context(server=server, channel=name)
-
-    return query
+    hexchat.command("query -nofocus {}".format(name))
+    return hexchat.find_context(server=server, channel=name)
 
 
 def wprint(w, line):
@@ -25,18 +22,17 @@ def wprint(w, line):
 
 def cmp_cb(word, wordeol, userdata):
     w = get_query("chancmp")
-    runs = 0
+    first = True
     match_nicks = set()
     wprint(w, "Searching for common users in: {}".format(",".join(word[1:])))
     for chan in word[1:]:
         ctx = hexchat.find_context(channel=chan)
         found_nicks = set(user.nick for user in ctx.get_list("users"))
-        if runs == 0:
+        if first:
+            first = False
             match_nicks = found_nicks
         else:
             match_nicks &= found_nicks
-
-        runs += 1
 
     wprint(w, "{}".format(match_nicks))
     return hexchat.EAT_ALL

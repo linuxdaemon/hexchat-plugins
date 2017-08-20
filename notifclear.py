@@ -2,8 +2,9 @@
 import hexchat
 
 __module_name__ = "NotificationClear"
-__module_description__ = "Clears all notifications in all contexts"
+__module_author__ = "linuxdaemon"
 __module_version__ = "0.1.0"
+__module_description__ = "Clears all notifications in all contexts"
 
 
 def clear(word, word_eol, userdata):

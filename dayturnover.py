@@ -5,6 +5,7 @@ from typing import Sequence, Dict, Tuple, Callable, Optional, TypeVar
 import hexchat
 
 __module_name__ = "DayTurnover"
+__module_author__ = "linuxdaemon"
 __module_version__ = "0.1.0"
 __module_description__ = "Adds a 'Day changed' message to buffers on day turnovers"
 
@@ -65,7 +66,7 @@ def stop_timer():
 def command(*names: str, min_args: int = 0) -> CmdDecoReturn:
     def _command(func: Func):
         for name in names:
-            commands[name] = (name, min_args)
+            commands[name] = (func, name, min_args)
         return func
 
     return _command
