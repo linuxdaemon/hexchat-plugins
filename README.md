@@ -15,6 +15,9 @@ Dummy stub file for the hexchat module
 ### NetStats
 Figure out what percentage of users and channels are visible to the client for a certain network
 
+### StatsFormat
+Format the output of /stats for G/K/Z/etc-lines
+
 ### NotifClear
 Clear all notifications from all contexts with a single command
 
