@@ -21,6 +21,11 @@ Clear all notifications from all contexts with a single command
 ### StatsFormat
 Format the output of /stats for G/K/Z/etc-lines
 
+### UtilMenus
+Adds various utility menu options including:
+- `/cs info <chan>` in channel menus
+- `/ns info <nick>` in nick menus
+
 ### WHOISLookup
 A client-bot script for looking up certain IP addresses for WHOIS data
 
